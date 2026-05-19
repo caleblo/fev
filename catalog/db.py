@@ -91,6 +91,7 @@ class CatalogDB:
             AND ds.name NOT LIKE 'gift_eval%'
             AND ds.name NOT LIKE 'fev_eval%'
             AND COALESCE(dl.status, 'pending') NOT IN ('success', 'running')
+            AND COALESCE(LOWER(d.dataset_origin), '') != 'synthetic'
             AND NOT (
                 EXISTS (
                     SELECT 1 FROM dataset_tasks dt
