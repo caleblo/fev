@@ -54,6 +54,13 @@ test = [
     "botocore==1.41.5",
     "boto3==1.41.5",
 ]
+catalog = [
+    "requests>=2.31.0",
+    "tqdm>=4.66.0",
+    "pandas>=2.1.0",
+    "pyarrow>=14.0.0",
+    "PyYAML>=6.0",
+]
 
 [build-system]
 requires = ["hatchling"]
