@@ -74,8 +74,8 @@ DARTS_REGISTRY: list[dict[str, Any]] = [
      "title": "TrafficDataset (Darts)",        "freq": "hourly"},
     {"class": "USGasolineDataset",             "uid": None,      "horizon": 8,  "seasonality": 52,
      "title": "USGasolineDataset (Darts)",     "freq": "weekly"},
-    {"class": "UberTLCDataset",                "uid": None,      "horizon": 24, "seasonality": 24,
-     "title": "UberTLCDataset (Darts)",        "freq": "hourly"},
+    # UberTLCDataset: hash mismatch in Darts 0.44 — skip
+    # {"class": "UberTLCDataset", ...},
     {"class": "WeatherDataset",                "uid": None,      "horizon": 14, "seasonality": 7,
      "title": "WeatherDataset (Darts)",        "freq": "daily"},
     {"class": "WineDataset",                   "uid": "TFM-014", "horizon": 12, "seasonality": 12,
@@ -135,7 +135,11 @@ class DartsDatasetLoader:
     def load_df(self) -> pd.DataFrame:
         """Load as a pandas DataFrame with time index reset to a column."""
         ts = self.load_timeseries()
-        df = ts.pd_dataframe()
+        # Darts >= 0.27: to_dataframe(); older: pd_dataframe()
+        if hasattr(ts, "to_dataframe"):
+            df = ts.to_dataframe()
+        else:
+            df = ts.pd_dataframe()
         df.index.name = "timestamp"
         return df.reset_index()
 
@@ -159,21 +163,53 @@ class DartsDatasetLoader:
         return self.save_path
 
     def to_fev_task(self, **task_kwargs):
-        """Download if needed, then create an fev.Task for evaluation."""
+        """Download if needed, then create an fev.Task for evaluation.
+
+        Darts datasets are wide-format (one row per timestamp, columns = components).
+        We use fev's generate_univariate_targets_from='__ALL__' to split multivariate
+        datasets into univariate series automatically, or pick the first numeric column
+        for univariate datasets.
+        """
         import fev
+        import pandas as pd
 
         self.download()
+        df = self.load_df()  # shape: (T, 1+n_components) with 'timestamp' column
 
-        # Load and reshape to FEV's wide-array schema via LocalDatasetLoader
-        from .dataset_loader import LocalDatasetLoader
-        loader = LocalDatasetLoader(self.save_path)
+        # Identify numeric columns (exclude timestamp)
+        num_cols = [c for c in df.columns if c != "timestamp"
+                    and pd.api.types.is_numeric_dtype(df[c])]
+
+        if not num_cols:
+            raise ValueError(f"No numeric columns found in {self.class_name}: {df.columns.tolist()}")
+
+        # Build wide-array HF dataset: one row per component (series), wide format
+        # Each component becomes its own 'series' row
+        import datasets as hf_datasets
 
         cache_dir = config.DOWNLOAD_ROOT / "_cache" / self.unified_id
         cache_dir.mkdir(parents=True, exist_ok=True)
         eval_path = cache_dir / "data.parquet"
 
         if not eval_path.exists():
-            hf_ds = loader.to_fev_dataset()
+            # Build long format: id=component, timestamp=..., target=value
+            ts_col = "timestamp" if "timestamp" in df.columns else df.columns[0]
+            records = []
+            for col in num_cols:
+                sub = df[[ts_col, col]].copy()
+                sub.columns = ["timestamp", "target"]
+                sub = sub.dropna()
+                records.append({
+                    "id": col,
+                    "timestamp": sub["timestamp"].tolist(),
+                    "target": sub["target"].tolist(),
+                })
+            features = hf_datasets.Features({
+                "id": hf_datasets.Value("string"),
+                "timestamp": hf_datasets.Sequence(hf_datasets.Value("timestamp[us]")),
+                "target": hf_datasets.Sequence(hf_datasets.Value("float64")),
+            })
+            hf_ds = hf_datasets.Dataset.from_list(records, features=features)
             hf_ds.to_parquet(str(eval_path))
 
         params: dict[str, Any] = {
@@ -183,6 +219,7 @@ class DartsDatasetLoader:
             "eval_metric": "MASE",
             "extra_metrics": ["MAE", "MSE", "RMSE"],
             "task_name": self.unified_id,
+            "target": "target",
         }
         params.update(task_kwargs)
         return fev.Task(**params)
@@ -268,12 +305,16 @@ def download_all_darts(
 
 
 def timeseries_to_df(ts: "TimeSeries") -> pd.DataFrame:
-    """Convert a Darts TimeSeries to a long-format pandas DataFrame.
+    """Convert a Darts TimeSeries to a pandas DataFrame.
 
-    Returns a DataFrame with columns: [timestamp, component, value]
+    Returns a DataFrame with a 'timestamp' column plus one column per component,
     compatible with LocalDatasetLoader's column detection heuristics.
     """
-    df = ts.pd_dataframe()
+    # Darts >= 0.27: to_dataframe(); older: pd_dataframe()
+    if hasattr(ts, "to_dataframe"):
+        df = ts.to_dataframe()
+    else:
+        df = ts.pd_dataframe()
     df.index.name = "timestamp"
     return df.reset_index()
 
