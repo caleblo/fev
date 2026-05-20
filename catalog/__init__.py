@@ -18,6 +18,7 @@ Metrics are computed by FEV (fev/metrics.py → MAE, MASE, MSE, etc.):
     writer.write_summary(summary, dataset_id=42)      # → catalog.db.evaluation_metrics
 """
 from .benchmark_factory import CatalogBenchmark
+from .darts_loader import DartsDatasetLoader, download_all_darts, df_to_timeseries, timeseries_to_df
 from .dataset_loader import LocalDatasetLoader
 from .db import CatalogDB
 from .download import DatasetDownloader
@@ -34,4 +35,8 @@ __all__ = [
     "DatasetDownloader",
     "HFDatasetLoader",
     "download_explicit_targets",
+    "DartsDatasetLoader",
+    "download_all_darts",
+    "df_to_timeseries",
+    "timeseries_to_df",
 ]

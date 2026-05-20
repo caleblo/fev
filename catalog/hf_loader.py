@@ -18,10 +18,76 @@ except ImportError as e:  # noqa: F841
 # ── HF repo → (config_name_key, target_col, horizon, seasonality) defaults ───
 # For datasets where the target column is not 'target'
 HF_TARGET_OVERRIDES: dict[str, dict[str, Any]] = {
-    # chronos_datasets non-standard columns
-    "ushcn_daily":        {"target": "TMAX",         "horizon": 14,  "seasonality": 7},
-    "weatherbench_daily": {"target": "target",        "horizon": 14,  "seasonality": 7,  "max_series": 10000},
-    "wiki_daily_100k":    {"target": "target",        "horizon": 7,   "seasonality": 7,  "max_series": 50000},
+    # ── autogluon/chronos_datasets ────────────────────────────────────────────
+    "ushcn_daily":                  {"target": "TMAX",          "horizon": 14,  "seasonality": 7},
+    "weatherbench_daily":           {"target": "target",        "horizon": 14,  "seasonality": 7,  "max_series": 10000},
+    "wiki_daily_100k":              {"target": "target",        "horizon": 7,   "seasonality": 7,  "max_series": 50000},
+
+    # ── autogluon/fev_datasets — non-standard target columns ─────────────────
+    # ETT datasets: use 'OT' (oil temperature) as primary forecast target
+    "ETT_15T":                      {"target": "OT",            "horizon": 96,  "seasonality": 96},
+    "ETT_1H":                       {"target": "OT",            "horizon": 24,  "seasonality": 24},
+    "ETT_1D":                       {"target": "OT",            "horizon": 14,  "seasonality": 7},
+    "ETT_1W":                       {"target": "OT",            "horizon": 8,   "seasonality": 1},
+
+    # bizitobs: multivariate (target_0 .. target_6) — use target_0
+    "bizitobs_l2c_1H":              {"target": "target_0",      "horizon": 24,  "seasonality": 24},
+    "bizitobs_l2c_5T":              {"target": "target_0",      "horizon": 144, "seasonality": 144},
+
+    # boomlet: observability multivariate (target_0 .. target_N) — use target_0
+    "boomlet_285":                  {"target": "target_0",      "horizon": 12,  "seasonality": 1},
+    "boomlet_619":                  {"target": "target_0",      "horizon": 12,  "seasonality": 1},
+    "boomlet_772":                  {"target": "target_0",      "horizon": 12,  "seasonality": 1},
+    "boomlet_963":                  {"target": "target_0",      "horizon": 12,  "seasonality": 1},
+    "boomlet_1062":                 {"target": "target_0",      "horizon": 12,  "seasonality": 1},
+    "boomlet_1209":                 {"target": "target_0",      "horizon": 12,  "seasonality": 1},
+    "boomlet_1225":                 {"target": "target_0",      "horizon": 12,  "seasonality": 1},
+    "boomlet_1230":                 {"target": "target_0",      "horizon": 12,  "seasonality": 1},
+    "boomlet_1282":                 {"target": "target_0",      "horizon": 12,  "seasonality": 1},
+    "boomlet_1487":                 {"target": "target_0",      "horizon": 12,  "seasonality": 1},
+    "boomlet_1631":                 {"target": "target_0",      "horizon": 12,  "seasonality": 1},
+    "boomlet_1676":                 {"target": "target_0",      "horizon": 12,  "seasonality": 1},
+    "boomlet_1855":                 {"target": "target_0",      "horizon": 12,  "seasonality": 1},
+    "boomlet_1975":                 {"target": "target_0",      "horizon": 12,  "seasonality": 1},
+    "boomlet_2187":                 {"target": "target_0",      "horizon": 12,  "seasonality": 1},
+
+    # favorita: sales forecasting
+    "favorita_stores_1D":           {"target": "sales",         "horizon": 14,  "seasonality": 7},
+    "favorita_transactions_1D":     {"target": "transactions",  "horizon": 14,  "seasonality": 7},
+    "favorita_stores_1W":           {"target": "sales",         "horizon": 8,   "seasonality": 1},
+    "favorita_stores_1M":           {"target": "sales",         "horizon": 12,  "seasonality": 12},
+
+    # FRED: macro datasets — very wide multivariate, use INDPRO (industrial production)
+    "fred_md_2025":                 {"target": "INDPRO",        "horizon": 12,  "seasonality": 12},
+    "fred_qd_2025":                 {"target": "GDPC1",         "horizon": 8,   "seasonality": 4},
+
+    # GVAR: use 'y' (output) as target
+    "gvar":                         {"target": "y",             "horizon": 8,   "seasonality": 4},
+
+    # KDD Cup 2022: wind power — use 'Patv' (active power)
+    "kdd_cup_2022_10T":             {"target": "Patv",          "horizon": 144, "seasonality": 144},
+    "kdd_cup_2022_30T":             {"target": "Patv",          "horizon": 48,  "seasonality": 48},
+    "kdd_cup_2022_1D":              {"target": "Patv",          "horizon": 14,  "seasonality": 7},
+
+    # Rohlik: orders and sales
+    "rohlik_orders_1D":             {"target": "orders",        "horizon": 14,  "seasonality": 7},
+    "rohlik_orders_1W":             {"target": "orders",        "horizon": 8,   "seasonality": 1},
+    "rohlik_sales_1D":              {"target": "sales",         "horizon": 14,  "seasonality": 7},
+    "rohlik_sales_1W":              {"target": "sales",         "horizon": 8,   "seasonality": 1},
+
+    # Rossmann: store sales
+    "rossmann_1D":                  {"target": "Sales",         "horizon": 14,  "seasonality": 7},
+    "rossmann_1W":                  {"target": "Sales",         "horizon": 8,   "seasonality": 1},
+
+    # UCI Air Quality: CO concentration
+    "uci_air_quality_1D":           {"target": "CO(GT)",        "horizon": 14,  "seasonality": 7},
+    "uci_air_quality_1H":           {"target": "CO(GT)",        "horizon": 24,  "seasonality": 24},
+
+    # UK COVID: new cases
+    "uk_covid_nation_1D":           {"target": "new_cases",     "horizon": 14,  "seasonality": 7},
+    "uk_covid_nation_1W":           {"target": "new_cases",     "horizon": 8,   "seasonality": 1},
+    "uk_covid_utla_1D":             {"target": "new_cases",     "horizon": 14,  "seasonality": 7},
+    "uk_covid_utla_1W":             {"target": "new_cases",     "horizon": 8,   "seasonality": 1},
 }
 
 # fev_datasets frequency heuristics (suffix → horizon, seasonality)
