@@ -21,6 +21,7 @@ from .benchmark_factory import CatalogBenchmark
 from .dataset_loader import LocalDatasetLoader
 from .db import CatalogDB
 from .download import DatasetDownloader
+from .hf_loader import HFDatasetLoader, download_explicit_targets
 from .metrics_writer import MetricsWriter
 from .task_factory import CatalogTask
 
@@ -31,4 +32,6 @@ __all__ = [
     "MetricsWriter",
     "LocalDatasetLoader",
     "DatasetDownloader",
+    "HFDatasetLoader",
+    "download_explicit_targets",
 ]
