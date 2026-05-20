@@ -357,11 +357,17 @@ class TempusBenchLoader:
         if targets_df.empty:
             raise ValueError(f"No target variables in {self.task_dir}")
 
+        # Infer actual frequency from modal time diff and resample to fill gaps.
+        # This is required for FEV's timestamp validation (pd.infer_freq fails on gaps).
+        freq_str = _infer_freq_from_df(targets_df)
+        if freq_str:
+            targets_df = targets_df.resample(freq_str).mean()
+
         # Build FEV long format: one row per target variable
         records = []
         for col in targets_df.columns:
-            s = targets_df[col].dropna()
-            if len(s) == 0:
+            s = targets_df[col]
+            if s.isna().all():
                 continue
             records.append({
                 "id": str(col),
@@ -412,6 +418,37 @@ class TempusBenchLoader:
 
 
 # ── Helpers ───────────────────────────────────────────────────────────────────
+
+def _infer_freq_from_df(df: pd.DataFrame) -> str | None:
+    """Infer pandas frequency string from modal time difference in a DataFrame."""
+    if len(df) < 2:
+        return None
+    try:
+        diffs = df.index.to_series().diff().dropna()
+        modal_diff = diffs.mode()[0]
+        total_seconds = modal_diff.total_seconds()
+        if total_seconds < 60:
+            return "s"
+        elif total_seconds < 3600:
+            mins = int(total_seconds / 60)
+            return f"{mins}min" if mins > 1 else "min"
+        elif total_seconds < 86400:
+            hours = int(total_seconds / 3600)
+            return f"{hours}h" if hours > 1 else "h"
+        elif total_seconds < 86400 * 7:
+            days = int(total_seconds / 86400)
+            return f"{days}D" if days > 1 else "D"
+        elif total_seconds < 86400 * 32:
+            return "W"
+        elif total_seconds < 86400 * 100:
+            return "ME"
+        elif total_seconds < 86400 * 200:
+            return "QE"
+        else:
+            return "YE"
+    except Exception:
+        return None
+
 
 def _parse_json_array(val) -> list:
     """Parse a JSON-encoded array from a CSV cell."""

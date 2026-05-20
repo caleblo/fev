@@ -37,8 +37,11 @@ class MetricsWriter:
         model = model_name or summary.get("model_name", "unknown")
         horizon = summary.get("horizon")
         count = 0
+        import math as _math
         for key, value in summary.items():
             if key.upper() in KNOWN_METRICS and isinstance(value, (int, float)):
+                if not _math.isfinite(value):
+                    continue  # skip NaN/Inf (e.g. all-zero series, empty windows)
                 self.db.upsert_metric(
                     dataset_id=dataset_id, model_name=model,
                     metric_name=key.upper(), metric_value=float(value),
