@@ -25,6 +25,7 @@ from .download import DatasetDownloader
 from .hf_loader import HFDatasetLoader, download_explicit_targets
 from .metrics_writer import MetricsWriter
 from .task_factory import CatalogTask
+from .tempusbench_loader import TempusBenchLoader, download_all_tempusbench
 
 __all__ = [
     "CatalogDB",
@@ -39,4 +40,6 @@ __all__ = [
     "download_all_darts",
     "df_to_timeseries",
     "timeseries_to_df",
+    "TempusBenchLoader",
+    "download_all_tempusbench",
 ]
