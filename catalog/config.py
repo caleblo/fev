@@ -1,14 +1,31 @@
 """Paths, constants, and configuration for the catalog bridge."""
 from __future__ import annotations
 
+import sys
 from pathlib import Path
+
+
+def _resolve_drive(win_path: str) -> Path:
+    """Resolve a Windows path like 'E:\\foo' to the correct form.
+
+    - On Windows: returns Path as-is.
+    - In WSL/bash (subagent environment): converts 'E:\\foo' → '/e/foo'.
+    - Accepts both backslash and forward-slash variants.
+    """
+    p = win_path.replace("\\", "/")
+    if sys.platform != "win32" and len(p) >= 2 and p[1] == ":":
+        drive = p[0].lower()
+        rest = p[2:].lstrip("/")
+        return Path(f"/{drive}/{rest}")
+    return Path(win_path)
+
 
 # ── Paths ─────────────────────────────────────────────────────────────────────
 # Single DB — catalog.db owns everything: metadata + download status + metrics
-DB_PATH = Path(r"E:\z_dataset lists\catalog.db")
+DB_PATH = _resolve_drive(r"E:\z_dataset lists\catalog.db")
 
 # Downloaded files live here — NEVER altered after download
-DOWNLOAD_ROOT = Path(r"E:\datasets")
+DOWNLOAD_ROOT = _resolve_drive(r"E:\datasets")
 LOG_PATH = DOWNLOAD_ROOT / "_logs" / "download_log.md"
 MIGRATIONS_DIR = Path(__file__).parent / "migrations"
 
